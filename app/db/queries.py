@@ -171,12 +171,16 @@ async def process_admob_reward(
     if not pool:
         u = _DEV_MOCK_USERS.get(firebase_uid)
         if not u:
-            return {"success": False, "error": "USER_NOT_FOUND"}
+            await sync_user(firebase_uid)
+            u = _DEV_MOCK_USERS.get(firebase_uid, {"balance": 2, "daily_gens": 0, "daily_ads": 0})
         if u["daily_ads"] >= max_daily_rewards:
             return {"success": False, "error": "DAILY_REWARD_LIMIT_EXCEEDED"}
         u["balance"] += reward_amount
         u["daily_ads"] += 1
         return {"success": True, "balance": u["balance"], "idempotent": False}
+
+    # Ensure user is registered/synced in DB
+    await sync_user(firebase_uid)
 
     async with pool.acquire() as conn:
         raw_result = await conn.fetchval(

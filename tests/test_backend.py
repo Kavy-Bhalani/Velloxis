@@ -89,3 +89,25 @@ def test_report_endpoint():
     data = response.json()
     assert data["status"] == "received"
     assert "report_id" in data
+
+def test_claim_reward():
+    settings.DEV_BYPASS_AUTH = True
+    # Initial balance check
+    init_res = client.get("/v1/credits", headers={"Authorization": "Bearer dev-token"})
+    assert init_res.status_code == 200
+    init_balance = init_res.json()["balance"]
+
+    response = client.post("/v1/rewards/claim", headers={"Authorization": "Bearer dev-token"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["balance"] == init_balance + 1
+
+def test_grant_welcome_bonus():
+    settings.DEV_BYPASS_AUTH = True
+    response = client.post("/v1/credits/grant-welcome", headers={"Authorization": "Bearer dev-token"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "balance" in data
+

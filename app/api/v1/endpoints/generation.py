@@ -125,13 +125,16 @@ async def generate_image(
         result = await ai_router.execute(payload.model, gen_input)
     except Exception as e:
         logger.error(f"Generation failed across all providers: {e}. Executing atomic refund.")
-        # Trigger automatic refund
-        await queries.refund_credit(
-            user_id=user_id,
-            cost=credit_cost,
-            gen_id=gen_id,
-            error_code=str(e)[:64]
-        )
+        try:
+            await queries.refund_credit(
+                user_id=user_id,
+                cost=credit_cost,
+                gen_id=gen_id,
+                error_code=str(e)[:60]
+            )
+        except Exception as refund_err:
+            logger.error(f"Refund credit execution error: {refund_err}")
+
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Inference provider encountered an error. Your credit has been automatically refunded."
