@@ -50,8 +50,9 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An internal server error occurred. Please try again shortly."}
     )
 
-# Mount API v1
+# Mount API v1 and direct fallback routes
 app.include_router(api_router, prefix="/v1")
+app.include_router(api_router)
 
 @app.get("/", tags=["Root"])
 async def root():
