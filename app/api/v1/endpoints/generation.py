@@ -67,11 +67,16 @@ async def generate_image(
     user_id, balance = await queries.sync_user(firebase_uid)
 
     # Determine credit cost
-    credit_cost = (
-        settings.QUALITY_MODEL_CREDIT_COST
-        if payload.model == "quality"
-        else settings.FAST_MODEL_CREDIT_COST
-    )
+    if payload.model in ("quality", "sana"):
+        credit_cost = settings.QUALITY_MODEL_CREDIT_COST
+    elif payload.model in ("flux", "flux-schnell"):
+        credit_cost = settings.FLUX_MODEL_CREDIT_COST
+    elif payload.model in ("janus", "janus-pro"):
+        credit_cost = settings.JANUS_MODEL_CREDIT_COST
+    elif payload.model in ("turbo", "sdxl-turbo"):
+        credit_cost = settings.TURBO_MODEL_CREDIT_COST
+    else:
+        credit_cost = settings.FAST_MODEL_CREDIT_COST
 
     # Generation ID
     gen_id = idempotency_key if idempotency_key else str(uuid.uuid4())
@@ -153,7 +158,8 @@ async def generate_image(
         media_type=result.mime_type,
         headers={
             "X-Generation-ID": gen_id,
-            "X-Model-Used": payload.model,
+            "X-Model-Used": result.model_name,
+            "X-Model-Alias": payload.model,
             "X-Provider-Used": result.provider_name,
             "X-Latency-Ms": str(result.latency_ms),
             "Cache-Control": "no-store, must-revalidate",

@@ -41,7 +41,10 @@ class Settings(BaseSettings):
 
     # Model Cost mapping (credits)
     FAST_MODEL_CREDIT_COST: int = 1
-    QUALITY_MODEL_CREDIT_COST: int = 1
+    QUALITY_MODEL_CREDIT_COST: int = 2
+    TURBO_MODEL_CREDIT_COST: int = 1
+    FLUX_MODEL_CREDIT_COST: int = 1
+    JANUS_MODEL_CREDIT_COST: int = 1
 
 @lru_cache
 def get_settings() -> Settings:

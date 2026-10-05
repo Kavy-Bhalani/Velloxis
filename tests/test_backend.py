@@ -20,6 +20,11 @@ def test_config():
     data = response.json()
     assert "models" in data
     assert "fast" in data["models"]
+    assert data["models"]["fast"]["model_id"] == "stabilityai/sdxl-turbo"
+    assert "flux" in data["models"]
+    assert data["models"]["flux"]["model_id"] == "black-forest-labs/FLUX-1-schnell"
+    assert "janus" in data["models"]
+    assert data["models"]["janus"]["model_id"] == "deepseek-ai/Janus-Pro-1B"
     assert "quality" in data["models"]
     assert len(data["aspect_ratios"]) >= 5
     assert len(data["styles"]) >= 6
@@ -58,21 +63,44 @@ def test_credits_endpoint():
 
 def test_generation_endpoint_flow():
     settings.DEV_BYPASS_AUTH = True
-    payload = {
-        "prompt": "A serene lotus pond in twilight with bioluminescent koi fish",
-        "model": "fast",
-        "aspect_ratio": "1:1",
-        "style": "fantasy"
-    }
-    response = client.post(
-        "/v1/generations",
-        json=payload,
-        headers={"Authorization": "Bearer dev-token"}
-    )
-    assert response.status_code == 200
-    assert response.headers.get("content-type") in ["image/webp", "image/jpeg"]
-    assert "x-generation-id" in response.headers
-    assert len(response.content) > 0
+    for model_alias in ["fast", "flux", "janus"]:
+        payload = {
+            "prompt": "A serene lotus pond in twilight with bioluminescent koi fish",
+            "model": model_alias,
+            "aspect_ratio": "1:1",
+            "style": "fantasy"
+        }
+        response = client.post(
+            "/v1/generations",
+            json=payload,
+            headers={"Authorization": "Bearer dev-token"}
+        )
+        assert response.status_code == 200, f"Failed for model {model_alias}: {response.text}"
+        assert response.headers.get("content-type") in ["image/webp", "image/jpeg"]
+        assert "x-generation-id" in response.headers
+        assert "x-model-used" in response.headers
+        assert len(response.content) > 0
+
+@pytest.mark.asyncio
+async def test_router_fallback_chain():
+    from app.providers.router import AIRouter
+    from app.providers.mock_provider import MockAIProvider
+    from app.providers.base import GenerationInput
+
+    router = AIRouter()
+    # Configure primary (SDXL) to fail, secondary (FLUX) to succeed
+    router.deepinfra_sdxl = MockAIProvider(provider_name="mock_deepinfra", model_name="stabilityai/sdxl-turbo", should_fail=True)
+    router.deepinfra_flux = MockAIProvider(provider_name="mock_deepinfra", model_name="black-forest-labs/FLUX-1-schnell", should_fail=False)
+
+    payload = GenerationInput(prompt="A futuristic neon city", width=1024, height=1024)
+    result = await router.execute("fast", payload)
+    assert result.model_name == "black-forest-labs/FLUX-1-schnell"
+
+    # Configure both SDXL and FLUX to fail, Janus to succeed
+    router.deepinfra_flux.should_fail = True
+    router.deepinfra_janus = MockAIProvider(provider_name="mock_deepinfra", model_name="deepseek-ai/Janus-Pro-1B", should_fail=False)
+    result = await router.execute("fast", payload)
+    assert result.model_name == "deepseek-ai/Janus-Pro-1B"
 
 def test_report_endpoint():
     settings.DEV_BYPASS_AUTH = True
