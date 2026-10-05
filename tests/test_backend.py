@@ -88,7 +88,7 @@ async def test_router_fallback_chain():
     from app.providers.base import GenerationInput
 
     router = AIRouter()
-    # Configure primary (SDXL) to fail, secondary (FLUX) to succeed
+    # 1. Test fast tier fallback (SDXL -> FLUX)
     router.deepinfra_sdxl = MockAIProvider(provider_name="mock_deepinfra", model_name="stabilityai/sdxl-turbo", should_fail=True)
     router.deepinfra_flux = MockAIProvider(provider_name="mock_deepinfra", model_name="black-forest-labs/FLUX-1-schnell", should_fail=False)
 
@@ -96,10 +96,15 @@ async def test_router_fallback_chain():
     result = await router.execute("fast", payload)
     assert result.model_name == "black-forest-labs/FLUX-1-schnell"
 
-    # Configure both SDXL and FLUX to fail, Janus to succeed
+    # 2. Test FLUX preservation: if DeepInfra FLUX fails, fall back to fal.ai FLUX (NOT SDXL Turbo!)
     router.deepinfra_flux.should_fail = True
+    router.fal_flux = MockAIProvider(provider_name="mock_fal", model_name="fal-ai/flux/schnell", should_fail=False)
+    result = await router.execute("flux", payload)
+    assert result.model_name == "fal-ai/flux/schnell"
+
+    # 3. Test Janus execution
     router.deepinfra_janus = MockAIProvider(provider_name="mock_deepinfra", model_name="deepseek-ai/Janus-Pro-1B", should_fail=False)
-    result = await router.execute("fast", payload)
+    result = await router.execute("janus", payload)
     assert result.model_name == "deepseek-ai/Janus-Pro-1B"
 
 def test_report_endpoint():

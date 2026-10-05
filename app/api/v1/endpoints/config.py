@@ -20,7 +20,7 @@ async def get_app_config():
                 "model_id": "stabilityai/sdxl-turbo",
                 "credit_cost": settings.FAST_MODEL_CREDIT_COST,
                 "description": "Ultra-fast real-time synthesis (1-4 steps). Primary default model.",
-                "fallback_chain": ["FLUX.1 [schnell]", "Janus-Pro 1B", "fal.ai FLUX"],
+                "fallback_chain": ["FLUX.1 [schnell]"],
             },
             "flux": {
                 "name": "FLUX.1 Schnell",
@@ -29,7 +29,7 @@ async def get_app_config():
                 "model_id": "black-forest-labs/FLUX-1-schnell",
                 "credit_cost": settings.FLUX_MODEL_CREDIT_COST,
                 "description": "State-of-the-art fast diffusion with high detail and text adherence.",
-                "fallback_chain": ["SDXL Turbo", "Janus-Pro 1B", "fal.ai FLUX"],
+                "fallback_chain": ["fal.ai FLUX"],
             },
             "janus": {
                 "name": "Janus-Pro 1B",
@@ -38,7 +38,7 @@ async def get_app_config():
                 "model_id": "deepseek-ai/Janus-Pro-1B",
                 "credit_cost": settings.JANUS_MODEL_CREDIT_COST,
                 "description": "DeepSeek's unified multimodal autoregressive generation architecture.",
-                "fallback_chain": ["SDXL Turbo", "FLUX.1 [schnell]", "fal.ai FLUX"],
+                "fallback_chain": [],
             },
             "quality": {
                 "name": "Quality Sana",
@@ -47,7 +47,7 @@ async def get_app_config():
                 "model_id": "fal-ai/sana",
                 "credit_cost": settings.QUALITY_MODEL_CREDIT_COST,
                 "description": "Enhanced detail, typography, and artistic rendering.",
-                "fallback_chain": ["SDXL Turbo", "FLUX.1 [schnell]", "Janus-Pro 1B"],
+                "fallback_chain": ["FLUX.1 [schnell]"],
             }
         },
         "aspect_ratios": [

@@ -61,24 +61,26 @@ class AIRouter:
 
     def get_fallback_chain(self, model_alias: str) -> List[AIProvider]:
         """
-        Builds the ordered failover execution chain based on model tier and alias.
-        Order:
-        1. Default/Fast/Turbo: stabilityai/sdxl-turbo -> FLUX-1-schnell -> Janus-Pro-1B -> fal.ai
-        2. Flux: FLUX-1-schnell -> stabilityai/sdxl-turbo -> Janus-Pro-1B -> fal.ai
-        3. Janus: Janus-Pro-1B -> stabilityai/sdxl-turbo -> FLUX-1-schnell -> fal.ai
-        4. Quality: fal.ai Sana -> FLUX-1-schnell -> stabilityai/sdxl-turbo -> Janus-Pro-1B
+        Builds the fallback execution chain strictly respecting the user's selected model:
+        1. Flux: DeepInfra FLUX.1 [schnell] -> fal.ai FLUX (Keeps FLUX fidelity; NEVER downgrades to SDXL Turbo)
+        2. Janus: DeepInfra Janus-Pro-1B (NEVER downgrades to SDXL Turbo)
+        3. Quality: fal.ai Sana -> DeepInfra FLUX (Preserves high quality; NEVER downgrades to SDXL Turbo)
+        4. Turbo: DeepInfra SDXL Turbo
+        5. Fast (Default): DeepInfra SDXL Turbo -> DeepInfra FLUX
         """
         alias = model_alias.lower()
         if alias in ("flux", "flux-schnell"):
-            chain = [self.deepinfra_flux, self.deepinfra_sdxl, self.deepinfra_janus, self.fal_flux]
+            chain = [self.deepinfra_flux, self.fal_flux]
         elif alias in ("janus", "janus-pro"):
-            chain = [self.deepinfra_janus, self.deepinfra_sdxl, self.deepinfra_flux, self.fal_flux]
+            chain = [self.deepinfra_janus]
         elif alias in ("quality", "sana"):
             primary = self.fal_sana if self.fal_sana else self.deepinfra_flux
-            chain = [primary, self.deepinfra_flux, self.deepinfra_sdxl, self.deepinfra_janus]
+            chain = [primary, self.fal_flux]
+        elif alias in ("turbo", "sdxl", "sdxl-turbo"):
+            chain = [self.deepinfra_sdxl, self.deepinfra_flux]
         else:
-            # Default ("fast", "turbo", "sdxl-turbo")
-            chain = [self.deepinfra_sdxl, self.deepinfra_flux, self.deepinfra_janus, self.fal_flux]
+            # Default "fast" (SDXL Turbo with FLUX fallback)
+            chain = [self.deepinfra_sdxl, self.deepinfra_flux]
 
         # Filter out None providers (e.g. if fal.ai key not configured)
         return [p for p in chain if p is not None]
